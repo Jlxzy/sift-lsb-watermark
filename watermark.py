@@ -4,8 +4,11 @@ Author: Joel Foster, 2025
 
 import os
 import threading
+import argparse
+import json
 import cv2
 import numpy as np
+from pathlib import Path
 from customtkinter import *
 from customtkinter import ctk_tk
 from tkinter import filedialog, messagebox
@@ -749,7 +752,65 @@ class Watermark(CTk):
         height, width = image.shape[:2]
         return (radius <= x < width - radius) and (radius <= y < height - radius)
 
+CONFIG_PATH = Path(__file__).resolve().parent / "watermark_config.json"
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scale", type=float, default=None,
+                        help="Override scaling factor (e.g. 0.85, 1.0, 1.25)")
+    parser.add_argument("--save-scale", action="store_true",
+                        help="Save provided --scale value to config file for future runs")
+    return parser.parse_args()
 
-app = Watermark()
-app.mainloop()
+def load_config():
+    if CONFIG_PATH.exists():
+        try:
+            with open(CONFIG_PATH, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[WARN] Failed to read config: {e}")
+
+    # Create default config if missing or unreadable
+    default_cfg = {"scale": None}
+    save_config(default_cfg)
+    return default_cfg
+
+def save_config(cfg):
+    try:
+        with open(CONFIG_PATH, "w") as f:
+            json.dump(cfg, f, indent=2)
+        print(f"[INFO] Saved config to {CONFIG_PATH}")
+    except Exception as e:
+        print(f"[ERROR] Failed to save config: {e}")
+
+def get_scaling_factor(root):
+    dpi = root.winfo_fpixels('1i')
+    return dpi / 96.0
+
+def apply_scaling(root, override: float | None = None):
+    if override is not None:
+        scale = override
+        print(f"[INFO] Manual scaling override: {scale:.2f}x")
+    else:
+        scale = get_scaling_factor(root)
+        print(f"[INFO] Auto-detected DPI scaling: {scale:.2f}x")
+
+    root.tk.call('tk', 'scaling', scale)
+    set_widget_scaling(scale)
+    set_window_scaling(scale)
+
+if __name__ == "__main__":
+    args = parse_args()
+    cfg = load_config()
+
+    scale = args.scale if args.scale is not None else cfg.get("scale")
+
+    app = Watermark()
+    apply_scaling(app, scale)
+
+    # Save scale to config if requested
+    if args.save_scale and args.scale is not None:
+        cfg["scale"] = args.scale
+        save_config(cfg)
+
+    app.mainloop()

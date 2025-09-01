@@ -1,4 +1,4 @@
-Watermark Creation and Detection Tool Using SIFT and LSB Steganography
+# Watermark Creation and Detection Tool Using SIFT and LSB Steganography
 
 *Joel Foster, 2025*
 
@@ -28,3 +28,4 @@ tampering against a supplied watermark.
 
 Key points of an image are displayed in the key points section, and when tamper detection is applied, the key points
 shown are any key points that are not consistent with the watermark.
+
